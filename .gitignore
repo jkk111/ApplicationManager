@@ -4,3 +4,4 @@ apps
 uploads
 static
 man_conf.json
+*.log

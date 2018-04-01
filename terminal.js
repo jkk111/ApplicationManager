@@ -1,9 +1,15 @@
 let blessed = require('blessed')
-
+let fs = require('fs')
 const BUF_SIZE = 20;
 
 
 let build_screen = (screen) => {
+  if(screen.headless) {
+    return {
+      focus: () => {},
+      readInput: () => 'ace'
+    }
+  }
   let log = blessed.box({
     left: 0,
     top: 0,
@@ -65,18 +71,45 @@ let build_screen = (screen) => {
   return input
 }
 
+let screen = (headless) => {
+  if(headless) {
+    return {
+      headless: true,
+      render: () => {},
+      append: () => {}
+    }
+  } else {
+    return blessed.screen({
+      smartCSR: true
+    })
+  }
+}
+
+let box = (headless, log_str) => {
+  if(headless) {
+    return {}
+  }
+
+  return blessed.box({
+    width: '100%-2',
+    height: 1,
+    left: 1,
+    content: log_str
+  })
+}
+
 let inst = null;
 
 class Terminal {
-  constructor() {
-    this.screen = blessed.screen({
-      smartCSR: true
-    })
+  constructor(headless) {
+    this.headless = headless;
+    this.screen = screen(headless);
 
     this.input = build_screen(this.screen);
     this.screen.render();
 
     this.buf = [];
+    this.out_log = fs.createWriteStream(Date.now() + ".log");
   }
 
   static Get() {
@@ -84,7 +117,7 @@ class Terminal {
       return inst;
     }
 
-    inst = new Terminal();
+    inst = new Terminal(process.argv.indexOf('headless') > -1);
     return inst;
   }
 
@@ -134,12 +167,14 @@ class Terminal {
     let type_str = `[${type}]`.green;
     let log_str = `${app_str}${type_str} ${str}`
 
-    let log_entry = blessed.box({
-      width: '100%-2',
-      height: 1,
-      left: 1,
-      content: log_str
-    })
+    let log_entry = box(this.headless, log_str);
+
+    if(this.headless) {
+      console.log(log_str)
+    }
+
+    this.out_log.write(log_str)
+
     buf.push(log_entry)
     this.screen.append(log_entry);
     this.update_log_positions()

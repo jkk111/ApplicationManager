@@ -79,7 +79,7 @@ let run_query = (conn, query, args = []) => {
   return new Promise((resolve) => {
     conn.query(query, args, (err, data) => {
       if(err) {
-        console.error('[ERROR]'.red, query, args, err)
+        // console.error('[ERROR]'.red, query, args, err)
         resolve(false)
       } else {
         resolve(data);
@@ -115,7 +115,7 @@ class Database {
     if(DatabaseCache[name]) {
       return DatabaseCache[name];
     } else {
-      console.warn("Database %s not ready", name.blue)
+      // console.warn("Database %s not ready", name.blue)
     }
     let db = new Database(name);
     return db;
