@@ -1,0 +1,19 @@
+[
+  {
+    "name": "vars",
+    "keys": {
+      "name": "TEXT NOT NULL",
+      "value": "TEXT NOT NULL"
+    }
+  },
+  {
+    "name": "apps",
+    "keys": {
+      "app_id": "TEXT NOT NULL",
+      "repo": "VARCHAR(255) NOT NULL UNIQUE",
+      "domain": "TEXT",
+      "path": "TEXT",
+      "enabled": "BOOL DEFAULT TRUE"
+    }
+  }
+]
