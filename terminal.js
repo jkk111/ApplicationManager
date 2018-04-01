@@ -174,6 +174,7 @@ class Terminal {
     }
 
     this.out_log.write(log_str)
+    this.out_log.write('\n');
 
     buf.push(log_entry)
     this.screen.append(log_entry);
