@@ -68,6 +68,9 @@ class AppServer {
     let { routes = [] } = config;
 
     let dest_socket = get_socket(app_id);
+    try {
+      fs.unlinkSync(dest_socket)
+    } catch(e) {} // Probably Didn't Exist. Temporary Solution // TODO (jkk111): Find a proper way to implement this
 
     for(var route of routes) {
       let { domain, path } = route;
