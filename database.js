@@ -69,7 +69,7 @@ const CREATE_DB = (name) => `CREATE DATABASE IF NOT EXISTS ${name}`
 let change_db = (conn, name) => {
   return new Promise(resolve => {
     conn.changeUser({ database: name }, () => {
-      terminal.log('HOST', 'log', 'Database Changed To'.green, name.yellow)
+      terminal.log('HOST', 'log', `${'Database Changed To'.green} ${name.yellow}`)
       resolve();
     })
   });

@@ -182,7 +182,6 @@ class CommandHandler {
       }
       return  p;
     }, {a: ['']}).a
-    terminal.log('HOST', 'INFO', args.join(', '))
     let [ cmd ] = args;
     let cb = this.handlers[cmd];
 
@@ -274,6 +273,25 @@ let import_setup = async() => {
   }
 };
 
+let help = () => {
+  let apps = [
+    { name: 'exit', desc: 'Close The Application' },
+    { name: 'add <git_repo>', desc: 'Clones and adds service' },
+    { name: 'start <app_id>', desc: 'Starts app' },
+    { name: 'stop <app_id>', desc: 'Stops app' },
+    { name: 'apps', desc: 'Lists apps' },
+    { name: 'var', desc: 'Add var' },
+    { name: 'vars', desc: 'Lists vars' },
+    { name: 'reload', desc: 'Reloads Manager' },
+    { name: 'export', desc: 'Exports Config' },
+    { name: 'import', desc: 'Imports Config' },
+  ]
+
+  apps.forEach(item => {
+    terminal.log('HOST', 'INFO', `${item.name} - ${item.desc}`)
+  })
+}
+
 let runner = async() => {
   let ch = new CommandHandler();
   ch.on('exit', cleanup(server));
@@ -286,6 +304,7 @@ let runner = async() => {
   ch.on('reload', reload)
   ch.on('export', export_setup)
   ch.on('import', import_setup)
+  ch.on('help', help)
   while(true) {
     let command = await terminal.command();
     ch.handle(command);

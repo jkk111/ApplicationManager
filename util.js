@@ -207,7 +207,7 @@ let get_socket = (id) => {
   if(os.platform() === 'win32') {
     return `\\\\.\\pipe\\${id}`
   } else {
-    return `/var/run/${id}`
+    return `/tmp/${id}.socket`
   }
 }
 
