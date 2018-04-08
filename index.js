@@ -35,6 +35,9 @@ class AppServer {
     let [ port ] = await AppConfig.get('vars', { name: 'APP_SERVER_PORT' }, 'value');
     port = (port || {}).value
     let server = new AppServer(port || 8080);
+    try {
+      fs.unlinkSync(port);
+    } catch(e) {} // TODO (jkk111): Fix This
     server.listen();
     return server;
   }
