@@ -81,7 +81,12 @@ class AppServer {
   }
 
   async listen(alt_port) {
-    let { addr, port = alt_port } = this;
+    let { addr, port } = this;
+
+    if(alt_port) {
+      port = alt_port;
+    }
+
     this.server.listen(port, addr, this.ready);
 
     let enabled = await AppConfig.get('apps', { enabled: true }, 'app_id')
