@@ -87,6 +87,10 @@ class AppServer {
       port = alt_port;
     }
 
+    try {
+      fs.unlinkSync(port);
+    } catch(e) {}
+
     this.server.listen(port, addr, this.ready);
 
     let enabled = await AppConfig.get('apps', { enabled: true }, 'app_id')
