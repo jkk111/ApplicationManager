@@ -153,6 +153,11 @@ let start_node_app = (id, app_vars) => {
   let start_script = pkg.scripts.start;
   let args = start_script.split(' ');
   let cmd = args[0]
+
+  try {
+    fs.unlinkSync(get_socket(id))
+  } catch(e) {}
+
   let proc = spawn(cmd, args.slice(1), {
     cwd: path,
     detacthed: false,
