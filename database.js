@@ -111,6 +111,11 @@ class Database {
     this.add = this.add.bind(this);
   }
 
+  set_credentials(user, pass) {
+    this.user = user;
+    this.pass = pass;
+  }
+
   static Get(name) {
     if(DatabaseCache[name]) {
       return DatabaseCache[name];
@@ -132,11 +137,12 @@ class Database {
         return;
       }
 
-      this.preparing = true;
+      terminal.log('HOST', 'DEBUG', `${this.user}:${this.pass}`)
 
+      this.preparing = true;
       let conn = sql.createConnection({
-        user: config.get('db_user'),
-        password: config.get('db_pass'),
+        user: this.user,
+        password: this.pass,
         namedPlaceholders: true
       })
 

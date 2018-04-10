@@ -2,6 +2,14 @@ let blessed = require('blessed')
 let fs = require('fs')
 const BUF_SIZE = 20;
 
+try {
+  fs.mkdirSync(`${__dirname}/logs`)
+} catch(e) {
+  if(e.code !== 'EEXIST') {
+    throw e;
+  }
+}
+
 
 let build_screen = (screen) => {
   if(screen.headless) {
@@ -98,6 +106,30 @@ let box = (headless, log_str) => {
   })
 }
 
+let hiddeninput = () => {
+  let input = blessed.textbox({
+    hidden: true,
+    top: '100%-3',
+    left: 0,
+    width: '100%',
+    height: 3,
+    border: {
+      type: 'bg'
+    },
+    style: {
+      border: {
+        bg: 'green'
+      }
+    }
+  })
+
+  input.key(['escape', 'C-c'], function(ch, key) {
+    return process.exit(0);
+  });
+
+  return input
+}
+
 let inst = null;
 
 class Terminal {
@@ -106,10 +138,21 @@ class Terminal {
     this.screen = screen(headless);
 
     this.input = build_screen(this.screen);
+    this.hiddeninput = hiddeninput();
+
+    this.hiddeninput.on('keypress', (e) => {
+      process.nextTick(() => {
+        this.password_preview = ''.padStart(this.hiddeninput.getValue().length, '*');
+        this.input.setValue('Password: ' + this.password_preview)
+        this.screen.render()
+      })
+    })
+
+    this.screen.append(this.hiddeninput);
     this.screen.render();
 
     this.buf = [];
-    this.out_log = fs.createWriteStream(Date.now() + ".log");
+    this.out_log = fs.createWriteStream(`${__dirname}/logs/${Date.now()}.log`);
   }
 
   static Get() {
@@ -133,6 +176,11 @@ class Terminal {
   }
 
   log(app, type, str) {
+    if(this.destroyed)
+      return;
+    if(typeof str === 'object') {
+      return this.log(app, type, JSON.stringify(str, null, '  '))
+    }
     if(str.trim().length === 0) {
       return
     }
@@ -181,16 +229,38 @@ class Terminal {
     this.update_log_positions()
   }
 
+  password() {
+    return new Promise(resolve => {
+      this.input.setValue('Password: ');
+      this.hiddeninput.focus();
+      this.screen.render();
+      this.hiddeninput.readInput((e, v) => {
+        this.hiddeninput.clearValue();
+        this.input.setValue('');
+        this.screen.render();
+        this.log('HOST', 'password', '*****')
+        resolve(v);
+      })
+    })
+  }
+
   command() {
     return new Promise(resolve => {
       this.input.focus();
+      this.input.setValue('')
       this.input.readInput((e, v) => {
-        this.input.clearValue();
+        this.input.setValue('');
         this.screen.render();
         this.log('HOST', 'command', v)
         resolve(v);
       })
     })
+  }
+
+  destroy() {
+    this.screen.destroy();
+    this.destroyed = true;
+    inst = null;
   }
 }
 

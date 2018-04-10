@@ -1,5 +1,19 @@
 let crypto = require('crypto')
 let { get_socket, random_id, fetch_app, install_app, start_app, compute_app_path, load_config, clear_apps, clone_apps } = require('./util')
+let { set, get, write_secrets } = require('secret_manager');
+let secret_server_root = require.resolve('secret_manager/app');
+let secret_server_id = random_id();
+let secret_server_socket = get_socket(secret_server_id);
+let path = require('path');
+
+// let secret_server_proc = spawn('node' [ secret_server_root ], {
+//   cwd: path.basename(secret_server_proc),
+//   detached: false,
+//   env: Object.assign({}, process.env, app_vars, {
+//     socket: secret_server_socket
+//   })
+// })
+
 let HTTPProxy = require('./proxy')
 require('./debug.js')
 require('colors')
@@ -8,7 +22,29 @@ let AppConfig = Database.Get('AppConfig')
 let Terminal = require('./terminal');
 let terminal = Terminal.Get();
 let http = require('http')
-let fs = require('fs')
+let fs = require('fs');
+
+class Keyring {
+  constructor(pass, keyring = {}) {
+    this.keyring = keyring;
+    this.pass = pass;
+  }
+
+  async Get(key) {
+    if(!this.keyring[key]) {
+      terminal.log('HOST', 'SETUP', 'Getting Decryption Key For ' + key);
+      let pass = await terminal.password();
+      this.keyring[key] = pass;
+      set('app_man_keyring', key, pass, this.pass)
+    }
+
+    return this.keyring[key];
+  }
+
+  Delete(key) {
+    delete this.keyring[key]
+  }
+}
 
 class AppServer {
   constructor(port = 8080, addr = '0.0.0.0') {
@@ -32,13 +68,7 @@ class AppServer {
   }
 
   static async Init() {
-    let [ port ] = await AppConfig.get('vars', { name: 'APP_SERVER_PORT' }, 'value');
-    port = (port || {}).value
-    let server = new AppServer(port || 8080);
-    try {
-      fs.unlinkSync(port);
-    } catch(e) {} // TODO (jkk111): Fix This
-    server.listen();
+    let server = new AppServer();
     return server;
   }
 
@@ -50,8 +80,8 @@ class AppServer {
     terminal.log('HOST', 'info', 'Ready')
   }
 
-  async listen() {
-    let { addr, port } = this;
+  async listen(alt_port) {
+    let { addr, port = alt_port } = this;
     this.server.listen(port, addr, this.ready);
 
     let enabled = await AppConfig.get('apps', { enabled: true }, 'app_id')
@@ -317,7 +347,70 @@ let runner = async() => {
   }
 }
 
-AppServer.Init().then(srv => {
+AppServer.Init().then(async(srv) => {
   server = srv;
+  terminal.log('HOST', 'SETUP', 'Getting Host Keyring Password')
+  let keyring_pass = await terminal.password();
+
+  let keyring = get('app_man_keyring', keyring_pass);
+
+  if(keyring.success === false) {
+    terminal.log('HOST', 'ERROR', 'Failed To Load Keyring')
+    terminal.log('HOST', 'INFO', 'Regen Keyring? (yes/no)');
+
+    let cmd = await terminal.command();
+    terminal.log('HOST', 'DEBUG', cmd)
+
+    if(cmd === 'yes') {
+      let pass = await terminal.password();
+      let confirm = await terminal.password();
+      if(pass === confirm) {
+        write_secrets('app_man_keyring', {}, pass)
+        keyring = {}
+      } else {
+        terminal.destroy()
+        throw new Error('Error: Passwords Don\'t Match')
+        process.exit();
+      }
+    } else {
+      terminal.destroy();
+      console.log(pass)
+      process.exit();
+    }
+  }
+
+
+  terminal.log('HOST', 'keyring', Object.keys(keyring))
+  keyring = new Keyring(keyring_pass, keyring);
+  srv.keyring = keyring;
+
+  let credentials = null;
+  let need_creds = true;
+  do {
+    credentials = await keyring.Get('credentials');
+    credentials = get('credentials', credentials);
+
+    if(credentials.success === false) {
+      terminal.log('HOST', 'ERROR', credentials.error);
+      keyring.Delete('credentials')
+    } else {
+      need_creds = false;
+    }
+  } while(need_creds)
+
+  let { db_user, db_pass } = credentials;
+
+  AppConfig.set_credentials(db_user, db_pass);
+  terminal.log('HOST', 'DEBUG', 'HERE')
+  let [ port ] = await AppConfig.get('vars', { name: 'APP_SERVER_PORT' }, 'value');
+  port = (port || {}).value
+  try {
+    fs.unlinkSync(port);
+  } catch(e) {} // TODO (jkk111): Fix This
+
+  srv.listen(port);
+
+  terminal.log('HOST', 'DEBUG', 'HERE')
+
   runner();
 })

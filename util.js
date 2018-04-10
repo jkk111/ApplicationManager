@@ -9,6 +9,12 @@ let AppConfig = Database.Get('AppConfig');
 let Terminal = require('./terminal');
 let terminal = Terminal.Get();
 
+global.console = {
+  log: (...args) => {
+    terminal.log('HOST', 'LOG', args.join(' '))
+  }
+}
+
 try {
   fs.mkdirSync(`${__dirname}/apps`);
 } catch(e) {}
@@ -34,7 +40,7 @@ let get_app_vars = async(id) => {
   return parsed
 }
 
-let compute_app_path = (id) => `${__dirname}/apps/${id}`;
+let compute_app_path = (id) => `${__dirname}/apps/${id}/`;
 
 let git_pull = (id) => {
   return new Promise(resolve => {
@@ -90,8 +96,10 @@ let install_node_app = (id) => {
   return new Promise((resolve) => {
     let path = compute_app_path(id);
     terminal.log('HOST', 'info', 'Installing'.blue, id)
+
     let proc = exec('npm install' , {
-      cwd: path
+      cwd: path,
+      stdio: 'inherit'
     })
 
     proc.on('close', code => {

@@ -19,6 +19,35 @@ class Proxy {
   }
 
   proxyRequest(req, res) {
+    let { authorization } = req.headers;
+
+    if(!authorization || authorization) {
+      let url = req.url;
+      let mode = 'Basic';
+
+      if(url.includes('?')) {
+        let qs = url.slice(url.indexOf('?') + 1);
+        let params = qs.split('&');
+        let obj = {}
+        params = params.forEach(param => {
+          let [ key, value = '' ] = param.split('=');
+          obj[key] = value;
+        })
+
+        if(obj.mode) {
+          mode = obj.mode;
+        }
+      }
+
+
+
+      res.writeHead(401, {
+        'WWW-Authenticate': `${mode} realm=Secure Content`
+      });
+      res.end("denied");
+      return;
+    }
+
     let target = this.getMatches(req);
     if(target) {
       this.proxy.web(req, res, {
