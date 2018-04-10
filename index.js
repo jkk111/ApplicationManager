@@ -409,6 +409,15 @@ AppServer.Init().then(async(srv) => {
 
   let { db_user, db_pass } = credentials;
 
+  if(!db_user || !db_pass) {
+    terminal.log('HOST', 'INFO', 'Enter Database User')
+    db_user = await terminal.command();
+    terminal.log('HOST', 'INFO', 'Enter Database Pass')
+    db_pass = await terminal.password();
+    set('credentials', 'db_user', db_user, await keyring.Get('credentials'))
+    set('credentials', 'db_pass', db_pass, await keyring.Get('credentials'))
+  }
+
   AppConfig.set_credentials(db_user, db_pass);
   terminal.log('HOST', 'DEBUG', 'HERE')
   let [ port ] = await AppConfig.get('vars', { name: 'APP_SERVER_PORT' }, 'value');
